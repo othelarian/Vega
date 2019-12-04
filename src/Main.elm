@@ -45,17 +45,26 @@ init _ = (initModel, Task.perform SetZone Time.here)
 type Msg
     = SetZone Time.Zone
     | Tick Time.Posix
+    --
+    | Tst Time.Posix
+    --
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
     case msg of
         SetZone nzone -> ({model | zone = nzone}, Cmd.none)
         Tick ntime -> ({model | time = ntime}, Cmd.none)
+        --
+        Tst _ ->
+            let ntime = Time.millisToPosix ((Time.posixToMillis model.time) + 360000) in
+            ({model | time = ntime}, Cmd.none)
+        --
 
 -- SUBS
 
 subscriptions : Model -> Sub Msg
-subscriptions model = Time.every 1000 Tick
+subscriptions _ = Time.every 1000 Tick
+--subscriptions _ = Time.every 200 Tst
 
 -- HELPERS
 
@@ -66,29 +75,37 @@ getCenterTransform : (Int, Int) -> S.Attribute Msg
 getCenterTransform (centerX, centerY) =
     SA.transform ("translate("++(String.fromInt centerX)++" "++(String.fromInt centerY)++")")
 
-buildArc : Int -> Int -> Int -> Bool -> String
-buildArc ray val coeff par =
+buildArc : Int -> Int -> ConfArc -> Bool -> S.Svg Msg
+buildArc val limit confArc par =
     let
-        --
-        --
-        --
-        --
-        (fx, fy) =
-            let
-                dg = degrees (toFloat (val*coeff))
-                rayf = toFloat ray
-            in
-            ((cos dg)*rayf, (sin dg)*rayf)
-        --
-        large =
-            if par then if val < 31 then "0" else "1"
-            else "0"
-        swap = "0"
-        --
+        radS = itos confArc.radius
+        pathBase = [ "m", "0,-"++radS, "A", radS, radS, "0"]
+        arcStyle =
+            [ SA.stroke confArc.col
+            , SA.strokeWidth (itos confArc.thickness)
+            , SA.fill "none"
+            ]
+        dVal =
+            if val == 0 && (not par) then
+                ["0 1 0,"++radS, "A", radS, radS, "0 0 1 0,-"++radS]
+            else if val == 0 && par then
+                ["0 1 0,-"++radS]
+            else
+                let
+                    (fx, fy) =
+                        let
+                            dg = degrees (toFloat (val*confArc.coeff + -90))
+                            rayf = toFloat confArc.radius
+                        in
+                        ((cos dg)*rayf, (sin dg)*rayf)
+                    (large, swap) =
+                        if par then if val < (limit//2 +1) then ("0", "1") else ("1", "1")
+                        else if val < (limit//2) then ("1", "0") else ("0", "0")
+                in
+                [large, swap, (ftos fx), (ftos fy)]
+        fdVal = String.join " " (List.append pathBase dVal)
     in
-    --
-    --
-    String.join " " ["A", itos ray, itos ray, itos ray, large, swap, (ftos fx)++","++(ftos fy)]
+    S.path ((SA.d fdVal)::arcStyle) []
 
 -- VIEW
 
@@ -96,18 +113,18 @@ view : Model -> Browser.Document Msg
 view model =
     let
         clockZone =
-            getClockZone
+            viewClockZone
                 model.conf.bgCol
                 model.conf.ratioWidth
                 model.conf.ratioHeight
-                (getSvgContent model)
+                (viewSvgContent model)
     in
     { title = "Vega"
     , body = [toUnstyled (clockZone)]
     }
 
-getClockZone : String -> Int -> Int -> List (S.Svg Msg) -> Html Msg
-getClockZone bgCol rWidth rHeight content =
+viewClockZone : String -> Int -> Int -> List (S.Svg Msg) -> Html Msg
+viewClockZone bgCol rWidth rHeight content =
     let calcRatio = toFloat rWidth / toFloat rHeight in
     div
         [ HA.css
@@ -148,8 +165,8 @@ getClockZone bgCol rWidth rHeight content =
             ]
         ]
 
-getSvgContent : Model -> List (S.Svg Msg)
-getSvgContent model =
+viewSvgContent : Model -> List (S.Svg Msg)
+viewSvgContent model =
     --
     let
         --
@@ -166,43 +183,21 @@ getSvgContent model =
         [ []
         --
         --
+        , getSvg4Hours center model.conf.hours hrs (hrs//12 == 0)
         , getSvg4Minutes center model.conf.minutes mins (modBy 2 hrs == 0)
         , getSvg4Seconds center model.conf.seconds secs (modBy 2 mins == 0)
         ]
     --
-    {-
-    [ S.rect
-        [ SA.x "10"
-        , SA.y "10"
-        , SA.width "10"
-        , SA.height "10"
-        , SA.fill "#0f0"
-        ]
-        []
-    ]
-    -}
 
 getSvg4Seconds : (Int, Int) -> ConfSecond -> Int -> Bool -> List (S.Svg Msg)
 getSvg4Seconds center config second minMod =
-    --
     let
         --
-        circStyle = [SA.stroke "#f00", SA.fill "none"]
         --
-        circ =
-            if second == 0 || second == 60 then
-                --
-                S.circle [] []
-                --
-            else
-                --
-                let circPath = "m 0,-60"++(buildArc 60 second 6 True) in
-                --
-                S.path ((SA.d circPath)::circStyle) []
-                --
+        circ = buildArc second 60 config.confCirc minMod
+        --
+        --
     in
-    --
-    --
     [ S.g
         [getCenterTransform center]
         [
@@ -217,17 +212,40 @@ getSvg4Seconds center config second minMod =
 
 getSvg4Minutes : (Int, Int) -> ConfMinute -> Int -> Bool -> List (S.Svg Msg)
 getSvg4Minutes center config minute hrMod =
-    --
-    --
-    --
-    []
+    let
+        --
+        --
+        circ = buildArc minute 60 config.confCirc hrMod
+        --
+    in
+    [ S.g
+        [getCenterTransform center]
+        [
+        --
+            circ
+        --
+        --
+        ]
+    ]
 
-getSvg4Hours : List (S.Svg Msg)
-getSvg4Hours =
+getSvg4Hours : (Int, Int) -> ConfHour -> Int -> Bool -> List (S.Svg Msg)
+getSvg4Hours center config hour hrHalf =
+    let
+        --
+        circ = buildArc (modBy 12 hour) 12 config.confCirc hrHalf
+        --
+    in
     --
     --
-    --
-    []
+    [ S.g
+        [getCenterTransform center]
+        [
+        --
+            circ
+        --
+        --
+        ]
+    ]
 
 -- TODO : Day of the week
 -- TODO : Day of the month

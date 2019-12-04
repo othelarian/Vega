@@ -7,17 +7,26 @@ getConfig =
         2 -- ratioHeight
         "#000" -- bgCol
         (ConfSecond
-            True -- showNeedle
-            Both -- styleNeedle
+            (ConfShow True True True)
+            --
+            Both -- needleStyle
             "#0f0" -- needleCol
-            True -- showCirc
             --
+            (ConfArc 55 "#faf" 3 6)
             --
-            True -- showTick
             --
         )
         (ConfMinute
-            True -- showNeedle
+            (ConfShow True True True)
+            --
+            (ConfArc 60 "orange" 3 6)
+            --
+        )
+        (ConfHour
+            (ConfShow True True True)
+            --
+            (ConfArc 65 "red" 3 30)
+            --
         )
 
 type alias Conf =
@@ -26,6 +35,7 @@ type alias Conf =
     , bgCol : String
     , seconds : ConfSecond
     , minutes : ConfMinute
+    , hours : ConfHour
     }
 
 type NeedleStyle
@@ -33,20 +43,43 @@ type NeedleStyle
     | Back
     | Both
 
+type alias ConfShow =
+    { needle : Bool
+    , circle : Bool
+    , tick : Bool
+    }
+
+type alias ConfArc =
+    { radius : Int
+    , col : String
+    , thickness : Int
+    , coeff : Int
+    }
+
 type alias ConfSecond =
-    { showNeedle : Bool
-    , styleNeedle : NeedleStyle
+    { show : ConfShow
+    --
+    , needleStyle : NeedleStyle
     , needleCol : String
-    , showCirc : Bool
+    --
+    , confCirc : ConfArc
     --
     -- TODO : col of circle
     --
     -- TODO : tick
     --
-    , showTick : Bool
-    --
     }
 
 type alias ConfMinute =
-    { showNeedle : Bool
+    { show : ConfShow
+    --
+    , confCirc : ConfArc
+    --
+    }
+
+type alias ConfHour =
+    { show : ConfShow
+    --
+    , confCirc : ConfArc
+    --
     }

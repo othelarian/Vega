@@ -1,0 +1,4 @@
+-- Clock generation
+elm make src/Main.elm --output=index.html
+-- Customizer generation
+elm make src/Custom.elm --output=customize.html
