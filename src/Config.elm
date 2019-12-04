@@ -3,8 +3,7 @@ module Config exposing(..)
 getConfig : Conf
 getConfig =
     Conf
-        3 -- ratioWidth
-        2 -- ratioHeight
+        Landscape -- screen
         "#000" -- bgCol
         (ConfSecond
             (ConfShow True True True)
@@ -29,19 +28,32 @@ getConfig =
             --
         )
 
+screenValues : ScreenStyle -> (Int, Int)
+screenValues screen =
+    case screen of
+        Landscape -> (3, 2)
+        Portrait -> (2, 3)
+
 type alias Conf =
-    { ratioWidth : Int
-    , ratioHeight : Int
+    { screen : ScreenStyle
     , bgCol : String
     , seconds : ConfSecond
     , minutes : ConfMinute
     , hours : ConfHour
     }
 
+-- TYPES
+
+type ScreenStyle
+    = Landscape
+    | Portrait
+
 type NeedleStyle
     = Front
     | Back
     | Both
+
+-- BUILDER CONF
 
 type alias ConfShow =
     { needle : Bool
@@ -55,6 +67,8 @@ type alias ConfArc =
     , thickness : Int
     , coeff : Int
     }
+
+-- COMPONENTS CONF
 
 type alias ConfSecond =
     { show : ConfShow
