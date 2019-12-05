@@ -1,4 +1,4 @@
-module Clock exposing(getClock)
+module Clock exposing(getClock, itos, ftos)
 
 import Config exposing(..)
 
