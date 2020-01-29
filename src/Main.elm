@@ -1,7 +1,11 @@
+module Main exposing(main)
+
 import Clock exposing(..)
 import Config exposing(Conf, ScreenStyle(..), getConfig, screenValues)
+import Parsing exposing(parseUrl)
 
 import Browser
+import Browser.Navigation as BN
 import Css exposing(..)
 import Css.Media as CM
 import Html.Styled exposing(..)
@@ -10,62 +14,62 @@ import Svg.Styled as S
 import Svg.Styled.Attributes as SA
 import Task
 import Time
-
-import Debug
+import Url
 
 -- MAIN
 
 main =
-    Browser.document
+    Browser.application
         { init = init
         , update = update
         , subscriptions = subscriptions
         , view = view
+        , onUrlRequest = LinkClicked
+        , onUrlChange = UrlChanged
         }
 
 -- MODEL
 
 type alias Model =
-    { zone : Time.Zone
+    { key : BN.Key
+    , url : Url.Url
+    , zone : Time.Zone
     , time : Time.Posix
     , conf : Conf
     }
 
-initModel : Model
-initModel =
+initModel : BN.Key -> Url.Url -> Model
+initModel key url =
     Model
+        key
+        url
         Time.utc
         (Time.millisToPosix 0)
-        getConfig
+        (parseUrl url)
 
-init : () -> (Model, Cmd Msg)
-init _ = (initModel, Task.perform SetZone Time.here)
+init : () -> Url.Url -> BN.Key -> (Model, Cmd Msg)
+init _ url key = (initModel key url, Task.perform SetZone Time.here)
 
 -- UPDATE
 
 type Msg
     = SetZone Time.Zone
     | Tick Time.Posix
-    --
-    | Tst Time.Posix
-    --
+    | LinkClicked Browser.UrlRequest
+    | UrlChanged Url.Url
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
     case msg of
         SetZone nzone -> ({model | zone = nzone}, Cmd.none)
         Tick ntime -> ({model | time = ntime}, Cmd.none)
-        --
-        Tst _ ->
-            let ntime = Time.millisToPosix ((Time.posixToMillis model.time) + 360000) in
-            ({model | time = ntime}, Cmd.none)
-        --
+        LinkClicked urlRequest -> (model, Cmd.none)
+        UrlChanged url -> ({model | url = url, conf = parseUrl url}, Cmd.none)
 
 -- SUBS
 
 subscriptions : Model -> Sub Msg
 subscriptions _ = Time.every 1000 Tick
---subscriptions _ = Time.every 200 Tst
 
 -- VIEW
 

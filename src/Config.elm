@@ -1,30 +1,39 @@
-module Config exposing(..)
+module Config exposing
+    ( Conf
+    , ConfArc
+    , ConfHour
+    , ConfMinute
+    , ConfSecond
+    , ScreenStyle(..)
+    , getConfig
+    , screenValues
+    )
 
 getConfig : Conf
 getConfig =
     Conf
         Landscape -- screen
-        "#000" -- bgCol
+        "#000000" -- bgCol
         (ConfSecond
             (ConfShow True True True)
             --
             Both -- needleStyle
-            "#0f0" -- needleCol
+            "#00ff00ff" -- needleCol
             --
-            (ConfArc 55 "#faf" 3 6)
+            (ConfArc 55 "#ffaaffff" 3 6)
             --
             --
         )
         (ConfMinute
             (ConfShow True True True)
             --
-            (ConfArc 60 "orange" 3 6)
+            (ConfArc 60 "#ffcc88ff" 3 6)
             --
         )
         (ConfHour
             (ConfShow True True True)
             --
-            (ConfArc 65 "red" 3 30)
+            (ConfArc 65 "#ff0000ff" 3 30)
             --
         )
 
@@ -78,9 +87,9 @@ type alias ConfSecond =
     --
     , confCirc : ConfArc
     --
-    -- TODO : col of circle
+    -- col of circle
     --
-    -- TODO : tick
+    -- tick
     --
     }
 
