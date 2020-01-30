@@ -58,9 +58,10 @@ type ScreenStyle
     | Portrait
 
 type NeedleStyle
-    = Front
-    | Back
-    | Both
+    --= Front
+    --| Back
+    --| Both
+    = Both
 
 -- BUILDER CONF
 

@@ -34,12 +34,14 @@ parseUrl url =
     fconf
 
 buildUrl : Url.Url -> Cfg.Conf -> String
-buildUrl url conf =
+buildUrl _ _ =
     let
         --
-        surl = Url.toString url
+        --surl = Url.toString url
         --
-        frstpart = ""
+        --frstpart = ""
+        --
+        _ = ""
         --
     in
     --
@@ -48,7 +50,7 @@ buildUrl url conf =
     --
 
 buildInfos : Cfg.Conf -> String
-buildInfos conf =
+buildInfos _ =
     --
     let
         --

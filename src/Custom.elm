@@ -1,14 +1,14 @@
 module Custom exposing(main)
 
-import Clock exposing(..)
-import Config exposing(..)
-import Parsing exposing(..)
+import Clock exposing(getClock, ftos)
+import Config as Cfg
+import Parsing exposing(parseUrl)
 
 import Browser
 import Browser.Navigation as BN
-import Css exposing(..)
+import Css as C
 import Css.Media as CM
-import Html.Styled exposing(..)
+import Html.Styled as HS
 import Html.Styled.Attributes as HA
 import Html.Styled.Events as HE
 import Svg.Styled as S
@@ -21,6 +21,7 @@ import Url
 
 -- MAIN
 
+main : Program () Model Msg
 main =
     Browser.application
         { init = init
@@ -38,7 +39,7 @@ type alias Model =
     , url : Url.Url
     , zone : Time.Zone
     , time : Time.Posix
-    , conf : Conf
+    , conf : Cfg.Conf
     }
 
 initModel : BN.Key -> Url.Url -> Model
@@ -72,35 +73,43 @@ update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
     case msg of
         SetZone nzone -> ({model | zone = nzone}, Cmd.none)
-        LinkClicked urlRequest -> (model, Cmd.none)
+        LinkClicked _ -> (model, Cmd.none)
         UrlChanged url -> ({model | url = url, conf = parseUrl url}, Cmd.none)
         -- time update
         --
-        -- TODO : date conf
+        -- IDEA : date conf
         --
         -- settings update
-        SetOrientation nscreen ->
+        SetOrientation _ -> --nscreen
             let
+                {-
                 ascreen = case nscreen of
-                    "landscape" -> Landscape
-                    "portrait" -> Portrait
+                    "landscape" -> Cfg.Landscape
+                    "portrait" -> Cfg.Portrait
                     _ -> model.conf.screen
                 oconf = model.conf
+                -}
+                --
+                _ = ""
+                --
                 --buildUrl ({oconf | screen = ascreen})
                 --
                 --
-                -- TODO : update the custom link
+                -- IDEA : update the custom link
                 --
             in
             --({model | conf = nconf}, Cmd.none)
-            (model, BN.pushUrl model.key (Url.toString url))
+            --(model, BN.pushUrl model.key (Url.toString url))
+            --
+            (model, Cmd.none)
+            --
         --
         --
         Tst ->
             let
                 --
                 surl = Url.toString model.url
-                nurl = if model.conf.screen == Landscape then surl++"?1::" else surl++"?0::"
+                nurl = if model.conf.screen == Cfg.Landscape then surl++"?1::" else surl++"?0::"
                 --
             in
             (model, BN.pushUrl model.key nurl)
@@ -109,15 +118,15 @@ update msg model =
 -- SUBS
 
 subscriptions : Model -> Sub Msg
-subscriptions model = Sub.none
+subscriptions _ = Sub.none
 
 -- HELPERS
 
-settingBlock : String -> List (Html Msg) -> Html Msg
+settingBlock : String -> List (HS.Html Msg) -> HS.Html Msg
 settingBlock title content =
-    p
+    HS.p
         []
-        (label [HA.css [marginRight (px 5)]] [text title]::content)
+        (HS.label [HA.css [C.marginRight (C.px 5)]] [HS.text title]::content)
 
 -- VIEW
 
@@ -125,56 +134,56 @@ view : Model -> Browser.Document Msg
 view model =
     { title = "Vega - CUSTOMIZATION"
     , body =
-        [ toUnstyled
-            (div
+        [ HS.toUnstyled
+            (HS.div
                 []
-                [ h2 [HA.css [textAlign center]] [text "VEGA - Customizer"]
+                [ HS.h2 [HA.css [C.textAlign C.center]] [HS.text "VEGA - Customizer"]
                 , viewDateSelector model.time model.zone
                 , viewLink model.url model.conf
                 , viewClockCustom model.conf model.time model.zone
                 , viewClockSettings model.conf
-                , div [HA.css [property "clear" "both"]] [text ""]
+                , HS.div [HA.css [C.property "clear" "both"]] [HS.text ""]
                 ]
             )
             ]
     }
 
-viewDateSelector : Time.Posix -> Time.Zone -> Html Msg
-viewDateSelector time zone =
+viewDateSelector : Time.Posix -> Time.Zone -> HS.Html Msg
+viewDateSelector _ _ =
     let
         --
         --
         _ = ""
         --
     in
-    div
+    HS.div
         [ HA.css
-            [ margin (px 10)
-            , border3 (px 2) solid (hex "#000")
-            , padding (px 10)
-            , textAlign center
+            [ C.margin (C.px 10)
+            , C.border3 (C.px 2) C.solid (C.hex "#000")
+            , C.padding (C.px 10)
+            , C.textAlign C.center
             ]
         ]
-        [ p [] [] -- TODO : YYYY/MM/DD
-        , p []
+        [ HS.p [] [] -- IDEA : YYYY/MM/DD
+        , HS.p []
         --
-        -- TODO : HH:MM:SS
+        -- IDEA : HH:MM:SS
         --
-            [ label [] [text ":"]
-            , input [] []
-            , label [] [text ":"]
+            [ HS.label [] [HS.text ":"]
+            , HS.input [] []
+            , HS.label [] [HS.text ":"]
             --
-            , input
+            , HS.input
                 []
                 []
             --
             --
             ]
-        , p [] [] -- TODO : | <- | select | -> |
+        , HS.p [] [] -- IDEA : | <- | select | -> |
         ]
 
-viewLink : Url.Url -> Conf -> Html Msg
-viewLink url conf =
+viewLink : Url.Url -> Cfg.Conf -> HS.Html Msg
+viewLink _ _ =
     let
         {-
         surl = Url.toString url
@@ -188,91 +197,91 @@ viewLink url conf =
         _ = ""
         --
     in
-    div
-        [HA.css [textAlign center]]
-        [ a
+    HS.div
+        [HA.css [C.textAlign C.center]]
+        [ HS.a
             [] []
             --[HA.href linkClck, HA.target "blank"]
             --[text linkClck]
         ]
 
-viewClockCustom : Conf -> Time.Posix -> Time.Zone -> Html Msg
+viewClockCustom : Cfg.Conf -> Time.Posix -> Time.Zone -> HS.Html Msg
 viewClockCustom conf time zone =
     let
-        (rWidth, rHeight) = Tuple.mapBoth toFloat toFloat (screenValues conf.screen)
-        margL coeff = if conf.screen == Landscape then 10 else coeff * 50
+        (rWidth, rHeight) = Tuple.mapBoth toFloat toFloat (Cfg.screenValues conf.screen)
+        margL coeff = if conf.screen == Cfg.Landscape then 10 else coeff * 50
     in
-    div
+    HS.div
         [ HA.css
-            [ margin (px 10)
-            , marginLeft (px (margL 2))
-            , backgroundColor (hex conf.bgCol)
-            , width (px (rWidth*200))
-            , height (px (rHeight*200))
-            , float left
+            [ C.margin (C.px 10)
+            , C.marginLeft (C.px (margL 2))
+            , C.backgroundColor (C.hex conf.bgCol)
+            , C.width (C.px (rWidth*200))
+            , C.height (C.px (rHeight*200))
+            , C.float C.left
             , CM.withMedia
-                [CM.all [CM.maxWidth (px 700)]]
-                [property "float" "none", marginRight auto, marginLeft auto]
+                [CM.all [CM.maxWidth (C.px 700)]]
+                [C.property "float" "none", C.marginRight C.auto, C.marginLeft C.auto]
             , CM.withMedia
-                [CM.all [CM.maxWidth (px 950)]]
-                [ width (px (rWidth*100))
-                , height (px (rHeight*100))
-                , marginLeft (px (margL 1))
+                [CM.all [CM.maxWidth (C.px 950)]]
+                [ C.width (C.px (rWidth*100))
+                , C.height (C.px (rHeight*100))
+                , C.marginLeft (C.px (margL 1))
                 ]
             , CM.withMedia
-                [CM.all [CM.maxWidth (px 1200)]]
-                [ width (px (rWidth*150))
-                , height (px (rHeight*150))
-                , marginLeft (px (margL 1.5))
+                [CM.all [CM.maxWidth (C.px 1200)]]
+                [ C.width (C.px (rWidth*150))
+                , C.height (C.px (rHeight*150))
+                , C.marginLeft (C.px (margL 1.5))
                 ]
             ]
         ]
         [ S.svg
             [ SA.css
-                [ width (pct 100)
-                , height (pct 100)
+                [ C.width (C.pct 100)
+                , C.height (C.pct 100)
                 ]
-            , SA.viewBox ("0 0 "++(ftos rWidth)++"00"++" "++(ftos rHeight)++"00")
+            , SA.viewBox ("0 0 "++ftos rWidth++"00"++" "++ftos rHeight++"00")
             ]
             (getClock conf time zone)
         ]
 
-viewClockSettings : Conf -> Html Msg
+viewClockSettings : Cfg.Conf -> HS.Html Msg
 viewClockSettings conf =
-    div
+    HS.div
         [ HA.css
-            [ margin (px 10)
-            , padding (px 3)
-            , float right
-            , width (calc (pct 100) minus (px 720))
-            , border3 (px 2) solid (hex "#000")
-            , boxSizing borderBox
+            [ C.margin (C.px 10)
+            , C.padding (C.px 3)
+            , C.float C.right
+            , C.width (C.calc (C.pct 100) C.minus (C.px 720))
+            , C.border3 (C.px 2) C.solid (C.hex "#000")
+            , C.boxSizing C.borderBox
             , CM.withMedia
-                [CM.all [CM.maxWidth (px 700)]]
-                [property "float" "none", width auto]
+                [CM.all [CM.maxWidth (C.px 700)]]
+                [C.property "float" "none", C.width C.auto]
             , CM.withMedia
-                [CM.all [CM.maxWidth (px 950)]]
-                [width (calc (pct 100) minus (px 360))]
+                [CM.all [CM.maxWidth (C.px 950)]]
+                [C.width (C.calc (C.pct 100) C.minus (C.px 360))]
             , CM.withMedia
-                [CM.all [CM.maxWidth (px 1200)]]
-                [width (calc (pct 100) minus (px 540))]
+                [CM.all [CM.maxWidth (C.px 1200)]]
+                [C.width (C.calc (C.pct 100) C.minus (C.px 540))]
             ]
         ]
-        [ h3 [HA.css [margin (px 5), marginLeft (px 10)]] [text "Settings"]
+        [ HS.h3 [HA.css [C.margin (C.px 5), C.marginLeft (C.px 10)]] [HS.text "Settings"]
         , settingBlock "Orientation"
-            [ select
+            [ HS.select
                 [HE.onInput SetOrientation]
-                [ option
-                    [HA.value "landscape", HA.selected (conf.screen == Landscape)]
-                    [text "landscape"]
-                , option
-                    [HA.value "portrait", HA.selected (conf.screen == Portrait)]
-                    [text "portrait"]
+                [ HS.option
+                    [HA.value "landscape", HA.selected (conf.screen == Cfg.Landscape)]
+                    [HS.text "landscape"]
+                , HS.option
+                    [HA.value "portrait", HA.selected (conf.screen == Cfg.Portrait)]
+                    [HS.text "portrait"]
                 ]
             ]
         --
         --
-        , button [HE.onClick Tst] [text "test btn"]
+        , HS.button [HE.onClick Tst] [HS.text "test btn"]
         --
         --
         ]

@@ -1,14 +1,14 @@
 module Main exposing(main)
 
-import Clock exposing(..)
-import Config exposing(Conf, ScreenStyle(..), getConfig, screenValues)
+import Clock
+import Config exposing(Conf, ScreenStyle(..), screenValues)
 import Parsing exposing(parseUrl)
 
 import Browser
 import Browser.Navigation as BN
-import Css exposing(..)
+import Css as C
 import Css.Media as CM
-import Html.Styled exposing(..)
+import Html.Styled as HS
 import Html.Styled.Attributes as HA
 import Svg.Styled as S
 import Svg.Styled.Attributes as SA
@@ -18,6 +18,7 @@ import Url
 
 -- MAIN
 
+main : Program () Model Msg
 main =
     Browser.application
         { init = init
@@ -63,7 +64,7 @@ update msg model =
     case msg of
         SetZone nzone -> ({model | zone = nzone}, Cmd.none)
         Tick ntime -> ({model | time = ntime}, Cmd.none)
-        LinkClicked urlRequest -> (model, Cmd.none)
+        LinkClicked _ -> (model, Cmd.none)
         UrlChanged url -> ({model | url = url, conf = parseUrl url}, Cmd.none)
 
 -- SUBS
@@ -80,50 +81,50 @@ view model =
             viewClockZone
                 model.conf.bgCol
                 model.conf.screen
-                (getClock model.conf model.time model.zone)
+                (Clock.getClock model.conf model.time model.zone)
     in
     { title = "Vega"
-    , body = [toUnstyled (clockZone)]
+    , body = [HS.toUnstyled clockZone]
     }
 
-viewClockZone : String -> ScreenStyle -> List (S.Svg Msg) -> Html Msg
+viewClockZone : String -> ScreenStyle -> List (S.Svg Msg) -> HS.Html Msg
 viewClockZone bgCol screen content =
     let
         (sWidth, sHeight) = screenValues screen
         calcRatio = toFloat sWidth / toFloat sHeight
     in
-    div
+    HS.div
         [ HA.css
-            [ position fixed
-            , top zero
-            , bottom zero
-            , right zero
-            , left zero
-            , backgroundColor (hex bgCol)
+            [ C.position C.fixed
+            , C.top C.zero
+            , C.bottom C.zero
+            , C.right C.zero
+            , C.left C.zero
+            , C.backgroundColor (C.hex bgCol)
             ]
         ]
-        [ div
+        [ HS.div
             [ HA.css
-                [ position absolute
-                , top zero
-                , bottom zero
-                , left zero
-                , right zero
-                , textAlign center
-                , width (vh (100*calcRatio))
-                , height (vh 100)
+                [ C.position C.absolute
+                , C.top C.zero
+                , C.bottom C.zero
+                , C.left C.zero
+                , C.right C.zero
+                , C.textAlign C.center
+                , C.width (C.vh (100*calcRatio))
+                , C.height (C.vh 100)
                 , CM.withMedia
                     [CM.all [CM.maxAspectRatio (CM.ratio sWidth sHeight)]]
-                    [width (vw 100), height (vw (100/calcRatio))]
-                , margin auto
-                , boxSizing borderBox
-                , padding (px 10)
+                    [C.width (C.vw 100), C.height (C.vw (100/calcRatio))]
+                , C.margin C.auto
+                , C.boxSizing C.borderBox
+                , C.padding (C.px 10)
                 ]
             ]
             [ S.svg
                 [ SA.css
-                    [ width (pct 100)
-                    , height (pct 100)
+                    [ C.width (C.pct 100)
+                    , C.height (C.pct 100)
                     ]
                 , SA.viewBox
                     ( "0 0 "
