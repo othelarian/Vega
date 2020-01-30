@@ -4,50 +4,57 @@ import Config as Cfg
 
 import Url
 
---import Debug
+import Debug
 
 parseUrl : Url.Url -> Cfg.Conf
 parseUrl url =
     let
         base = Cfg.getConfig
-        fconf =
-            case String.split "?" (Url.toString url) of
-                _::infos::[] ->
-                    case String.split ":" infos of
-                        frst::_::_::[] ->
-                            let
-                                defscreen =
-                                    case frst of
-                                        "0" -> Cfg.Landscape
-                                        "1" -> Cfg.Portrait
-                                        _ -> base.screen
-                                --
-                                --
-                                --
-                            in
-                            --
-                            {base | screen = defscreen}
-                            --
-                        _ -> base
+        tconf query =
+            case String.split ":" query of
+                frst::_::_::[] ->
+                    let
+                        {-
+                        defscreen =
+                            case frst of
+                                "0" -> Cfg.Landscape
+                                "1" -> Cfg.Portrait
+                                _ -> base.screen
+                        -}
+                        --
+                        -- IDEA : get orientation and bg color together
+                        --
+                        --
+                        --
+                    in
+                    --
+                    {base | screen = defscreen}
+                    --
+                    {-
+                    Cfg.Conf
+                        defscreen
+                    -}
+                    --
                 _ -> base
+        fconf =
+            case url.query of
+                Just query -> tconf query
+                Nothing -> base
     in
     fconf
 
-buildUrl : Url.Url -> Cfg.Conf -> String
-buildUrl _ _ =
+buildUrl : Url.Url -> Cfg.Conf -> Url.Url
+buildUrl url _ =
     let
         --
         --surl = Url.toString url
         --
         --frstpart = ""
         --
-        _ = ""
+        _ = Debug.log "BUiLD_URL" url.query
         --
     in
-    --
-    --
-    ""
-    --
+    nurl
 
 buildInfos : Cfg.Conf -> String
 buildInfos _ =
@@ -63,7 +70,7 @@ buildInfos _ =
     --
 
 -- first segment : SCREEN
--- 1 char, 0 or 1, for Landscape or Portrait
+-- 1 char, 0 or 1, for Landscape or Portrait, + 8 chars, color of the background => 9 chars
 -- second segment : VARIATIONS
 -- total : 2 symbols, for 8 bits, for each elements => 12 symbols, base32 format
 -- third segment : SETTINGS

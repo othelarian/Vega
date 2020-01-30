@@ -2,7 +2,7 @@ module Custom exposing(main)
 
 import Clock exposing(getClock, ftos)
 import Config as Cfg
-import Parsing exposing(parseUrl)
+import Parsing exposing(buildInfos, buildUrl, parseUrl)
 
 import Browser
 import Browser.Navigation as BN
@@ -80,19 +80,15 @@ update msg model =
         -- IDEA : date conf
         --
         -- settings update
-        SetOrientation _ -> --nscreen
+        SetOrientation nscreen ->
             let
-                {-
                 ascreen = case nscreen of
                     "landscape" -> Cfg.Landscape
                     "portrait" -> Cfg.Portrait
                     _ -> model.conf.screen
                 oconf = model.conf
-                -}
                 --
-                _ = ""
-                --
-                --buildUrl ({oconf | screen = ascreen})
+                url = buildUrl model.url {oconf | screen = ascreen}
                 --
                 --
                 -- IDEA : update the custom link
@@ -100,9 +96,7 @@ update msg model =
             in
             --({model | conf = nconf}, Cmd.none)
             --(model, BN.pushUrl model.key (Url.toString url))
-            --
             (model, Cmd.none)
-            --
         --
         --
         Tst ->
@@ -183,26 +177,27 @@ viewDateSelector _ _ =
         ]
 
 viewLink : Url.Url -> Cfg.Conf -> HS.Html Msg
-viewLink _ _ =
+viewLink url conf =
     let
-        {-
         surl = Url.toString url
         inter = if String.contains ".elm" surl then "/Main.elm?" else "/index.html?"
-        linkClck =
+        linkViewer =
             case String.indices "/" surl |> List.reverse |> List.head of
-                Just idx -> (String.left idx surl)++inter++(buildInfos conf)
+                Just idx -> String.left idx surl ++ inter ++ buildInfos conf
                 Nothing -> "Error in the url"
-        -}
-        --
-        _ = ""
-        --
     in
     HS.div
-        [HA.css [C.textAlign C.center]]
+        [HA.css [C.textAlign C.center, C.marginTop (C.px 20), C.marginBottom (C.px 20)]]
         [ HS.a
-            [] []
-            --[HA.href linkClck, HA.target "blank"]
-            --[text linkClck]
+            [ HA.href linkViewer
+            , HA.target "blank"
+            , HA.css
+                [ C.color (C.hex "#000")
+                , C.fontWeight C.bold
+                , C.fontSize (C.em 1.3)
+                ]
+            ]
+            [HS.text ("Go to viewer: "++linkViewer)]
         ]
 
 viewClockCustom : Cfg.Conf -> Time.Posix -> Time.Zone -> HS.Html Msg
