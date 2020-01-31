@@ -4,6 +4,7 @@ import Clock exposing(getClock, ftos)
 import Config as Cfg
 import Parsing exposing(buildInfos, buildUrl, parseUrl)
 
+import Array
 import Browser
 import Browser.Navigation as BN
 import Css as C
@@ -11,6 +12,7 @@ import Css.Media as CM
 import Html.Styled as HS
 import Html.Styled.Attributes as HA
 import Html.Styled.Events as HE
+import Maybe
 import Svg.Styled as S
 import Svg.Styled.Attributes as SA
 import Task
@@ -34,22 +36,41 @@ main =
 
 -- MODEL
 
+type alias Color =
+    { r : Int
+    , g : Int
+    , b : Int
+    , a : Int
+    }
+
+type alias Settings =
+    { bgCol : (Color, Bool)
+    }
+
+initSettings : Cfg.Conf -> Settings
+initSettings conf =
+    Settings
+        (fromHex2Color conf.bgCol, False) -- bgCol
+
 type alias Model =
     { key : BN.Key
     , url : Url.Url
     , zone : Time.Zone
     , time : Time.Posix
     , conf : Cfg.Conf
+    , settings : Settings
     }
 
 initModel : BN.Key -> Url.Url -> Model
 initModel key url =
+    let conf = parseUrl url in
     Model
         key
         url
         Time.utc
         (Time.millisToPosix 0)
-        (parseUrl url)
+        conf
+        (initSettings conf)
 
 init : () -> Url.Url -> BN.Key -> (Model, Cmd Msg)
 init _ url key = (initModel key url, Task.perform SetZone Time.here)
@@ -62,12 +83,19 @@ type Msg
     | UrlChanged Url.Url
     -- time messages
     --
-    -- settings messages
+    -- screen messages
     | SetOrientation String
     --
     --
+    -- variations messages
     --
-    | Tst
+    --
+    -- settings messages
+    --
+    --
+    -- color messages
+    | ToggleColorSliders String
+    | MoveColorSlider String String
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
@@ -79,7 +107,7 @@ update msg model =
         --
         -- IDEA : date conf
         --
-        -- settings update
+        -- screen update
         SetOrientation nscreen ->
             let
                 ascreen = case nscreen of
@@ -87,27 +115,65 @@ update msg model =
                     "portrait" -> Cfg.Portrait
                     _ -> model.conf.screen
                 oconf = model.conf
-                --
                 url = buildUrl model.url {oconf | screen = ascreen}
-                --
-                --
-                -- IDEA : update the custom link
-                --
             in
-            --({model | conf = nconf}, Cmd.none)
-            --(model, BN.pushUrl model.key (Url.toString url))
-            (model, Cmd.none)
+            (model, BN.pushUrl model.key (Url.toString url))
         --
         --
-        Tst ->
+        -- variations update
+        --
+        --
+        -- settings update
+        --
+        --
+        -- Color update
+        ToggleColorSliders ref ->
             let
+                tog (c, b) = (c, not b)
+                osettings = model.settings
+                nsettings =
+                    case ref of
+                        "bgCol" -> {osettings | bgCol = tog osettings.bgCol}
+                        --
+                        --
+                        --
+                        _ -> osettings
+            in
+            ({model | settings = nsettings}, Cmd.none)
+        MoveColorSlider ref value ->
+            let
+                modCol e c v = case e of
+                    "r" -> {c | r = v}
+                    "g" -> {c | g = v}
+                    "b" -> {c | b = v}
+                    "a" -> {c | a = v}
+                    _ -> c
+                prepMod (c, b) =
+                    (modCol (String.right 1 ref) c (String.toInt value |> Maybe.withDefault 0), b)
+                sref = String.split "-" ref |> List.head |> Maybe.withDefault ""
+                osettings = model.settings
+                --oconf = model.conf
+                nsettings = case sref of
+                    "bgCol" -> {osettings | bgCol = prepMod osettings.bgCol}
+                    --
+                    --
+                    _ -> osettings
                 --
-                surl = Url.toString model.url
-                nurl = if model.conf.screen == Cfg.Landscape then surl++"?1::" else surl++"?0::"
+                oconf = model.conf
+                nconf = case sref of
+                    "bgCol" -> {oconf | bgCol = fromColor2Hex (Tuple.first nsettings.bgCol)}
+                    --
+                    --
+                    _ -> oconf
+                url = buildUrl model.url nconf
                 --
             in
-            (model, BN.pushUrl model.key nurl)
-        --
+            --
+            --
+            --({model | settings = nsettings}, Cmd.none)
+            --
+            ({model | settings = nsettings}, BN.pushUrl model.key (Url.toString url))
+            --
 
 -- SUBS
 
@@ -116,11 +182,29 @@ subscriptions _ = Sub.none
 
 -- HELPERS
 
-settingBlock : String -> List (HS.Html Msg) -> HS.Html Msg
-settingBlock title content =
-    HS.p
-        []
-        (HS.label [HA.css [C.marginRight (C.px 5)]] [HS.text title]::content)
+fromHex2Color : String -> Color
+fromHex2Color hex =
+    let
+        src = "0123456789abcdef"
+        toHexInt v = String.indexes v src |> List.head |> Maybe.withDefault 1
+        toColInt v = toHexInt (String.left 1 v) * 16 + toHexInt (String.right 1 v)
+        h = String.dropLeft 1 hex
+        r = String.left 2 h
+        g = String.left 4 h |> String.dropLeft 2
+        b = String.right 4 h |> String.dropRight 2
+        a = String.right 2 h
+    in
+    Color (toColInt r) (toColInt g) (toColInt b) (toColInt a)
+
+fromColor2Hex : Color -> String
+fromColor2Hex color =
+    let
+        src = String.toList "0123456789abcdef" |> Array.fromList
+        fromSrc i = Array.get i src |> Maybe.withDefault '0'
+        toHex v = String.fromList [fromSrc (v // 16), fromSrc (remainderBy 16 v)]
+        hex = toHex color.r++toHex color.g++toHex color.b++toHex color.a
+    in
+    "#"++hex
 
 -- VIEW
 
@@ -135,7 +219,7 @@ view model =
                 , viewDateSelector model.time model.zone
                 , viewLink model.url model.conf
                 , viewClockCustom model.conf model.time model.zone
-                , viewClockSettings model.conf
+                , viewClockSettings model.conf model.settings
                 , HS.div [HA.css [C.property "clear" "both"]] [HS.text ""]
                 ]
             )
@@ -241,8 +325,23 @@ viewClockCustom conf time zone =
             (getClock conf time zone)
         ]
 
-viewClockSettings : Cfg.Conf -> HS.Html Msg
-viewClockSettings conf =
+viewClockSettings : Cfg.Conf -> Settings -> HS.Html Msg
+viewClockSettings conf settings =
+    let
+        -- SCREEN =========================================
+        orientOpts =
+            [ {name = "landscape", value = "landscape", sel = conf.screen == Cfg.Landscape}
+            , {name = "portrait", value = "portrait", sel = conf.screen == Cfg.Portrait}
+            ]
+        --
+        --
+        -- VARIATIONS =====================================
+        --
+        --
+        -- SETTINGS =======================================
+        --
+        --
+    in
     HS.div
         [ HA.css
             [ C.margin (C.px 10)
@@ -263,20 +362,84 @@ viewClockSettings conf =
             ]
         ]
         [ HS.h3 [HA.css [C.margin (C.px 5), C.marginLeft (C.px 10)]] [HS.text "Settings"]
-        , settingBlock "Orientation"
-            [ HS.select
-                [HE.onInput SetOrientation]
-                [ HS.option
-                    [HA.value "landscape", HA.selected (conf.screen == Cfg.Landscape)]
-                    [HS.text "landscape"]
-                , HS.option
-                    [HA.value "portrait", HA.selected (conf.screen == Cfg.Portrait)]
-                    [HS.text "portrait"]
-                ]
-            ]
+        -- SCREEN ===================================================
+        , HS.h4 [HA.css [C.marginLeft (C.px 20)]] [HS.text "Screen settings"]
+        , viewOptionSelector "Orientation" SetOrientation orientOpts
         --
         --
-        , HS.button [HE.onClick Tst] [HS.text "test btn"]
+        , viewColorSelector "Background color" "bgCol" conf.bgCol settings.bgCol
+        --
+        --
+        -- VARIATIONS ===============================================
+        --
+        --
+        -- SETTINGS =================================================
         --
         --
         ]
+
+viewSettingsBlock : String -> List (HS.Html Msg) -> HS.Html Msg
+viewSettingsBlock title content =
+    HS.p
+        [HA.css [C.margin (C.px 4)]]
+        ( HS.label
+            [HA.css [C.marginRight (C.px 5), C.width (C.px 160), C.display C.inlineBlock]]
+            [HS.text title]::content
+        )
+
+viewOptionSelector : String -> (String -> Msg) -> List {name : String, value : String, sel : Bool} -> HS.Html Msg
+viewOptionSelector title msg options =
+    let
+        option name value sel = HS.option
+            [HA.value value, HA.selected sel] [HS.text name]
+    in
+    viewSettingsBlock title
+        [ HS.select
+            [HE.onInput msg]
+            (List.map (\o -> option o.name o.value o.sel) options)
+        ]
+
+viewColorSelector : String -> String -> String -> (Color, Bool) -> HS.Html Msg
+viewColorSelector title ref hex (color, open) =
+    let
+        labCss stitle svalue = HS.label
+            [HA.css [C.width (C.px 70), C.display C.inlineBlock]]
+            [HS.text (stitle++": "++String.fromInt svalue)]
+        sliCss sref usref val repcol = HS.input
+            [ HA.css
+                [ C.width (C.pct 80)
+                , C.maxWidth (C.px 256)
+                , C.backgroundColor (C.hex repcol)
+                , C.property "appearance" "none"
+                , C.property "-webkit-appearance" "none"
+                , C.height (C.px 6)
+                , C.marginBottom (C.px 12)
+                ]
+            , HA.type_ "range"
+            , HA.min "0"
+            , HA.max "255"
+            , HA.value (String.fromInt val)
+            , HE.onInput (MoveColorSlider (sref++"-"++usref))
+            ] []
+        sliders =
+            if open then
+                [ HS.br [] [], labCss "R" color.r, sliCss ref "r" color.r "#f00"
+                , HS.br [] [], labCss "G" color.g, sliCss ref "g" color.g "#0f0"
+                , HS.br [] [], labCss "B" color.b, sliCss ref "b" color.b "#00f"
+                , HS.br [] [], labCss "a" color.a, sliCss ref "a" color.a "#aaa"
+                ]
+            else []
+    in
+    viewSettingsBlock title
+        ( HS.button
+            [ HA.css
+                [ C.width (C.px 55)
+                , C.backgroundColor (C.hex hex)
+                , C.color (C.hex hex)
+                , C.marginLeft (C.px 15)
+                ]
+            , HE.onClick (ToggleColorSliders ref)
+            ]
+            [HS.text "color"]
+            --[]
+        ::sliders)

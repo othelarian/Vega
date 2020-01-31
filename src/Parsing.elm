@@ -4,7 +4,7 @@ import Config as Cfg
 
 import Url
 
-import Debug
+--import Debug
 
 parseUrl : Url.Url -> Cfg.Conf
 parseUrl url =
@@ -14,27 +14,52 @@ parseUrl url =
             case String.split ":" query of
                 frst::_::_::[] ->
                     let
-                        {-
-                        defscreen =
-                            case frst of
-                                "0" -> Cfg.Landscape
-                                "1" -> Cfg.Portrait
-                                _ -> base.screen
-                        -}
+                        -- SCREEN ===================================
+                        (defscreen, bgcol) =
+                            let len = String.length frst in
+                            if String.length frst > 0 then
+                                if len == 1 then
+                                    if frst == "1" then (Cfg.Portrait, base.bgCol)
+                                    else (Cfg.Landscape, base.bgCol)
+                                else if len == 8 then (base.screen, "#"++frst)
+                                else
+                                    ( if String.left 1 frst == "1" then Cfg.Portrait else Cfg.Landscape
+                                    , "#"++ String.dropLeft 1 frst
+                                    )
+                            else (base.screen, base.bgCol)
+                        -- VARIATIONS ===============================
                         --
-                        -- IDEA : get orientation and bg color together
                         --
+                        --
+                        -- SETTINGS =================================
                         --
                         --
                     in
-                    --
-                    {base | screen = defscreen}
-                    --
-                    {-
                     Cfg.Conf
                         defscreen
-                    -}
-                    --
+                        bgcol
+                        (Cfg.ConfSecond
+                            (Cfg.ConfShow True True True)
+                            --
+                            Cfg.StyleBoth -- needleStyle
+                            "#00ff00ff" -- needleCol
+                            --
+                            (Cfg.ConfArc 55 "#ffaaffff" 3 6)
+                            --
+                            --
+                        )
+                        (Cfg.ConfMinute
+                            (Cfg.ConfShow True True True)
+                            --
+                            (Cfg.ConfArc 60 "#ffcc88ff" 3 6)
+                            --
+                        )
+                        (Cfg.ConfHour
+                            (Cfg.ConfShow True True True)
+                            --
+                            (Cfg.ConfArc 65 "#ff0000ff" 3 30)
+                            --
+                        )
                 _ -> base
         fconf =
             case url.query of
@@ -44,30 +69,32 @@ parseUrl url =
     fconf
 
 buildUrl : Url.Url -> Cfg.Conf -> Url.Url
-buildUrl url _ =
-    let
-        --
-        --surl = Url.toString url
-        --
-        --frstpart = ""
-        --
-        _ = Debug.log "BUiLD_URL" url.query
-        --
-    in
-    nurl
+buildUrl url conf =
+    {url | query = Just (buildInfos conf)}
 
 buildInfos : Cfg.Conf -> String
-buildInfos _ =
-    --
+buildInfos conf =
     let
+        -- SCREEN =========================================
+        frst =
+            let
+                orientation = if conf.screen == Cfg.Portrait then "1" else ""
+                color = if conf.bgCol /= "#000000ff" then String.dropLeft 1 conf.bgCol else ""
+            in
+            orientation ++ color
+        -- VARIATIONS =====================================
+        --
+        snd = ""
+        --
+        -- SETTINGS =======================================
+        --
+        thrd = ""
         --
         --
-        _ = ""
-        --
+        -- FINAL ==========================================
+        fnl = String.join ":" [frst, snd, thrd]
     in
-    --
-    ""
-    --
+    if fnl == "::" then "" else fnl
 
 -- first segment : SCREEN
 -- 1 char, 0 or 1, for Landscape or Portrait, + 8 chars, color of the background => 9 chars

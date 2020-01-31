@@ -4,6 +4,8 @@ module Config exposing
     , ConfHour
     , ConfMinute
     , ConfSecond
+    , ConfShow
+    , NeedleStyle(..)
     , ScreenStyle(..)
     , getConfig
     , screenValues
@@ -13,11 +15,11 @@ getConfig : Conf
 getConfig =
     Conf
         Landscape -- screen
-        "#000000" -- bgCol
+        "#000000ff" -- bgCol
         (ConfSecond
             (ConfShow True True True)
             --
-            Both -- needleStyle
+            StyleBoth -- needleStyle
             "#00ff00ff" -- needleCol
             --
             (ConfArc 55 "#ffaaffff" 3 6)
@@ -61,7 +63,7 @@ type NeedleStyle
     --= Front
     --| Back
     --| Both
-    = Both
+    = StyleBoth
 
 -- BUILDER CONF
 
