@@ -117,7 +117,7 @@ buildInfos conf =
 
 -- VARIATIONS
 
--- NEEDLE
+-- NEEDLE ??? (I forget everything about this stuff)
 -- no needle
 -- needle classic
 -- needle double, only bottom

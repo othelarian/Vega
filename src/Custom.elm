@@ -19,8 +19,6 @@ import Task
 import Time
 import Url
 
---import Debug
-
 -- MAIN
 
 main : Program () Model Msg
@@ -43,14 +41,20 @@ type alias Color =
     , a : Int
     }
 
+type alias SettingsColor =
+    { c1: Color
+    , c2: Color
+    , open: Bool
+    }
+
 type alias Settings =
-    { bgCol : (Color, Bool)
+    { bgCol : SettingsColor
     }
 
 initSettings : Cfg.Conf -> Settings
 initSettings conf =
     Settings
-        (fromHex2Color conf.bgCol, False) -- bgCol
+        (SettingsColor (fromHex2Color conf.bgCol) (fromHex2Color conf.bgCol) False) -- bgCol
 
 type alias Model =
     { key : BN.Key
@@ -96,6 +100,7 @@ type Msg
     -- color messages
     | ToggleColorSliders String
     | MoveColorSlider String String
+    | SelectColorSlider String
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
@@ -129,51 +134,50 @@ update msg model =
         -- Color update
         ToggleColorSliders ref ->
             let
-                tog (c, b) = (c, not b)
-                osettings = model.settings
-                nsettings =
-                    case ref of
-                        "bgCol" -> {osettings | bgCol = tog osettings.bgCol}
-                        --
-                        --
-                        --
-                        _ -> osettings
+                togcol sc = {sc | c2 = sc.c1, open = not sc.open}
+                (nsettings, nconf) = moveColor
+                    model.settings
+                    model.conf
+                    ref
+                    (\col -> togcol col)
+                    (\col -> fromColor2Hex col.c1)
+                    (\col -> col.open)
             in
-            ({model | settings = nsettings}, Cmd.none)
+            ({model | settings = nsettings, conf = nconf}, Cmd.none)
         MoveColorSlider ref value ->
             let
-                modCol e c v = case e of
-                    "r" -> {c | r = v}
-                    "g" -> {c | g = v}
-                    "b" -> {c | b = v}
-                    "a" -> {c | a = v}
-                    _ -> c
-                prepMod (c, b) =
-                    (modCol (String.right 1 ref) c (String.toInt value |> Maybe.withDefault 0), b)
+                prepMod sc =
+                    let
+                        modCol e c v = case e of
+                            "r" -> {c | r = v}
+                            "g" -> {c | g = v}
+                            "b" -> {c | b = v}
+                            "a" -> {c | a = v}
+                            _ -> c
+                    in
+                    {sc | c2 = modCol (String.right 1 ref) sc.c2 (String.toInt value |> Maybe.withDefault 0)}
                 sref = String.split "-" ref |> List.head |> Maybe.withDefault ""
-                osettings = model.settings
-                --oconf = model.conf
-                nsettings = case sref of
-                    "bgCol" -> {osettings | bgCol = prepMod osettings.bgCol}
-                    --
-                    --
-                    _ -> osettings
-                --
-                oconf = model.conf
-                nconf = case sref of
-                    "bgCol" -> {oconf | bgCol = fromColor2Hex (Tuple.first nsettings.bgCol)}
-                    --
-                    --
-                    _ -> oconf
-                url = buildUrl model.url nconf
-                --
+                (nsettings, nconf) = moveColor
+                    model.settings
+                    model.conf
+                    sref
+                    (\col -> prepMod col)
+                    (\col -> fromColor2Hex col.c2)
+                    (\_ -> True)
             in
-            --
-            --
-            --({model | settings = nsettings}, Cmd.none)
-            --
+            ({model | settings = nsettings, conf = nconf}, Cmd.none)
+        SelectColorSlider ref ->
+            let
+                (nsettings, nconf) = moveColor
+                    model.settings
+                    model.conf
+                    ref
+                    (\col -> {col | c1 = col.c2, open = False})
+                    (\col -> fromColor2Hex col.c2)
+                    (\_ -> True)
+                url = buildUrl model.url nconf
+            in
             ({model | settings = nsettings}, BN.pushUrl model.key (Url.toString url))
-            --
 
 -- SUBS
 
@@ -205,6 +209,20 @@ fromColor2Hex color =
         hex = toHex color.r++toHex color.g++toHex color.b++toHex color.a
     in
     "#"++hex
+
+moveColor : Settings -> Cfg.Conf -> String -> (SettingsColor -> SettingsColor) -> (SettingsColor -> String) -> (SettingsColor -> Bool) -> (Settings, Cfg.Conf)
+moveColor osettings oconf ref modSettings modConf callConf =
+    let
+        nsettings = case ref of
+            "bgCol" -> {osettings | bgCol = modSettings osettings.bgCol}
+            _ -> osettings
+        nconf =
+            if callConf osettings.bgCol then case ref of
+                "bgCol" -> {oconf | bgCol = modConf nsettings.bgCol}
+                _ -> oconf
+            else oconf
+    in
+    (nsettings, nconf)
 
 -- VIEW
 
@@ -328,17 +346,14 @@ viewClockCustom conf time zone =
 viewClockSettings : Cfg.Conf -> Settings -> HS.Html Msg
 viewClockSettings conf settings =
     let
+        subtitle subttl = HS.h4 [HA.css [C.marginLeft (C.px 20)]] [HS.text subttl]
         -- SCREEN =========================================
         orientOpts =
             [ {name = "landscape", value = "landscape", sel = conf.screen == Cfg.Landscape}
             , {name = "portrait", value = "portrait", sel = conf.screen == Cfg.Portrait}
             ]
+        -- SECONDS ========================================
         --
-        --
-        -- VARIATIONS =====================================
-        --
-        --
-        -- SETTINGS =======================================
         --
         --
     in
@@ -363,17 +378,13 @@ viewClockSettings conf settings =
         ]
         [ HS.h3 [HA.css [C.margin (C.px 5), C.marginLeft (C.px 10)]] [HS.text "Settings"]
         -- SCREEN ===================================================
-        , HS.h4 [HA.css [C.marginLeft (C.px 20)]] [HS.text "Screen settings"]
+        , subtitle "Screen settings"
         , viewOptionSelector "Orientation" SetOrientation orientOpts
-        --
-        --
         , viewColorSelector "Background color" "bgCol" conf.bgCol settings.bgCol
+        -- SECONDS ==================================================
+        , subtitle "Seconds settings"
         --
         --
-        -- VARIATIONS ===============================================
-        --
-        --
-        -- SETTINGS =================================================
         --
         --
         ]
@@ -399,9 +410,11 @@ viewOptionSelector title msg options =
             (List.map (\o -> option o.name o.value o.sel) options)
         ]
 
-viewColorSelector : String -> String -> String -> (Color, Bool) -> HS.Html Msg
-viewColorSelector title ref hex (color, open) =
+viewColorSelector : String -> String -> String -> SettingsColor -> HS.Html Msg
+viewColorSelector title ref hex settcol =
     let
+        btn_width = 55
+        btn_col c = fromColor2Hex c
         labCss stitle svalue = HS.label
             [HA.css [C.width (C.px 70), C.display C.inlineBlock]]
             [HS.text (stitle++": "++String.fromInt svalue)]
@@ -422,24 +435,33 @@ viewColorSelector title ref hex (color, open) =
             , HE.onInput (MoveColorSlider (sref++"-"++usref))
             ] []
         sliders =
-            if open then
-                [ HS.br [] [], labCss "R" color.r, sliCss ref "r" color.r "#f00"
-                , HS.br [] [], labCss "G" color.g, sliCss ref "g" color.g "#0f0"
-                , HS.br [] [], labCss "B" color.b, sliCss ref "b" color.b "#00f"
-                , HS.br [] [], labCss "a" color.a, sliCss ref "a" color.a "#aaa"
+            if settcol.open then
+                [ HS.button
+                    [ HA.css
+                        [ C.width (C.px btn_width)
+                        , C.backgroundColor (C.hex (btn_col settcol.c2))
+                        , C.color (C.hex (btn_col settcol.c2))
+                        , C.marginLeft (C.px 15)
+                        ]
+                        , HE.onClick (SelectColorSlider ref)
+                    ]
+                    [HS.text "color"]
+                , HS.br [] [], labCss "R" settcol.c2.r, sliCss ref "r" settcol.c2.r "#f00"
+                , HS.br [] [], labCss "G" settcol.c2.g, sliCss ref "g" settcol.c2.g "#0f0"
+                , HS.br [] [], labCss "B" settcol.c2.b, sliCss ref "b" settcol.c2.b "#00f"
+                , HS.br [] [], labCss "a" settcol.c2.a, sliCss ref "a" settcol.c2.a "#aaa"
                 ]
             else []
     in
     viewSettingsBlock title
         ( HS.button
             [ HA.css
-                [ C.width (C.px 55)
-                , C.backgroundColor (C.hex hex)
-                , C.color (C.hex hex)
+                [ C.width (C.px btn_width)
+                , C.backgroundColor (C.hex (btn_col settcol.c1))
+                , C.color (C.hex (btn_col settcol.c1))
                 , C.marginLeft (C.px 15)
                 ]
             , HE.onClick (ToggleColorSliders ref)
             ]
             [HS.text "color"]
-            --[]
         ::sliders)

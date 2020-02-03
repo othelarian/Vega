@@ -29,9 +29,9 @@ getClock conf time zone =
         [ [testScreen]
         --
         --
-        , componentHours center conf.hours hrs (hrs//12 == 0)
-        , componentMinutes center conf.minutes mins (modBy 2 hrs == 0)
-        , componentSeconds center conf.seconds secs (modBy 2 mins == 0)
+        --, componentHours center conf.hours hrs (hrs//12 == 0)
+        --, componentMinutes center conf.minutes mins (modBy 2 hrs == 0)
+        , component center conf.seconds secs (modBy 2 mins == 0)
         ]
     --
 
@@ -48,12 +48,12 @@ getCenterTransform (centerX, centerY) =
 
 -- COMPONENTS
 
-componentSeconds : (Int, Int) -> Cfg.ConfSecond -> Int -> Bool -> List (S.Svg msg)
-componentSeconds center config second minMod =
+component : (Int, Int) -> Cfg.ConfPart -> Int -> Bool -> List (S.Svg msg)
+component center config value valMod =
     let
         --
         --
-        circ = buildArc second 60 config.confCirc minMod
+        circ = buildArc value 60 config.confCirc valMod
         --
         --
     in
@@ -69,44 +69,14 @@ componentSeconds center config second minMod =
         ]
     ]
 
-componentMinutes : (Int, Int) -> Cfg.ConfMinute -> Int -> Bool -> List (S.Svg msg)
-componentMinutes center config minute hrMod =
-    let
-        --
-        --
-        circ = buildArc minute 60 config.confCirc hrMod
-        --
-    in
-    [ S.g
-        [getCenterTransform center]
-        [
-        --
-            circ
-        --
-        --
-        ]
-    ]
-
-componentHours : (Int, Int) -> Cfg.ConfHour -> Int -> Bool -> List (S.Svg msg)
-componentHours center config hour hrHalf =
-    let
-        --
-        circ = buildArc (modBy 12 hour) 12 config.confCirc hrHalf
-        --
-    in
-    --
-    --
-    [ S.g
-        [getCenterTransform center]
-        [
-        --
-            circ
-        --
-        --
-        ]
-    ]
-
 -- BUILDERS
+
+buildNeedle : S.Svg msg
+buildNeedle =
+    --
+    --
+    --
+    S.line [] []
 
 buildArc : Int -> Int -> Cfg.ConfArc -> Bool -> S.Svg msg
 buildArc val limit confArc par =

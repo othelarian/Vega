@@ -1,10 +1,8 @@
 module Config exposing
     ( Conf
     , ConfArc
-    , ConfHour
-    , ConfMinute
-    , ConfSecond
-    , ConfShow
+    , ConfPart
+    , DeviationStyle(..)
     , NeedleStyle(..)
     , ScreenStyle(..)
     , getConfig
@@ -16,28 +14,18 @@ getConfig =
     Conf
         Landscape -- screen
         "#000000ff" -- bgCol
-        (ConfSecond
-            (ConfShow True True True)
-            --
-            StyleBoth -- needleStyle
-            "#00ff00ff" -- needleCol
-            --
-            (ConfArc 55 "#ffaaffff" 3 6)
-            --
-            --
+        (ConfPart -- seconds
+            Nothing -- needle (TO CHANGE)
+            Nothing -- arcFront (TO CHANGE)
+            Nothing -- arcBack (TO CHANGE)
+            Nothing -- tickFront (TO CHANGE)
+            Nothing -- tickFront5 (TO CHANGE)
+            Nothing -- tickBack (TO CHANGE)
+            Nothing -- tickBack5 (TO CHANGE)
+            Nothing -- deviated
         )
-        (ConfMinute
-            (ConfShow True True True)
-            --
-            (ConfArc 60 "#ffcc88ff" 3 6)
-            --
-        )
-        (ConfHour
-            (ConfShow True True True)
-            --
-            (ConfArc 65 "#ff0000ff" 3 30)
-            --
-        )
+        --
+        --
 
 screenValues : ScreenStyle -> (Int, Int)
 screenValues screen =
@@ -48,9 +36,12 @@ screenValues screen =
 type alias Conf =
     { screen : ScreenStyle
     , bgCol : String
-    , seconds : ConfSecond
-    , minutes : ConfMinute
-    , hours : ConfHour
+    , seconds : ConfPart
+    --, minutes : ConfMinute
+    --, hours : ConfHour
+    -- day in week
+    -- day in month
+    -- month
     }
 
 -- TYPES
@@ -60,52 +51,46 @@ type ScreenStyle
     | Portrait
 
 type NeedleStyle
-    --= Front
-    --| Back
-    --| Both
-    = StyleBoth
+    = StyleClassic
+
+type DeviationStyle
+    = DeviationNone
+    | DeviationSecond
+    | DeviationMinute
 
 -- BUILDER CONF
 
-type alias ConfShow =
-    { needle : Bool
-    , circle : Bool
-    , tick : Bool
+type alias ConfNeedle =
+    { style : NeedleStyle
+    , start : Int -- starting point, eq "needle distance"
+    , length : Int
     }
 
 type alias ConfArc =
     { radius : Int
-    , col : String
+    , color : String
     , thickness : Int
-    , coeff : Int
     }
 
--- COMPONENTS CONF
-
-type alias ConfSecond =
-    { show : ConfShow
-    --
-    , needleStyle : NeedleStyle
-    , needleCol : String
-    --
-    , confCirc : ConfArc
-    --
-    -- col of circle
-    --
-    -- tick
-    --
+type alias ConfTick =
+    { radius : Int
+    , color : String
+    , thickness : Int
+    , length : Int
     }
 
-type alias ConfMinute =
-    { show : ConfShow
-    --
-    , confCirc : ConfArc
-    --
+type alias ConfDeviation =
+    { style : DeviationStyle
+    , distance : Int
     }
 
-type alias ConfHour =
-    { show : ConfShow
-    --
-    , confCirc : ConfArc
-    --
+type alias ConfPart =
+    { needle : Maybe ConfNeedle
+    , arcFront : Maybe ConfArc
+    , arcBack : Maybe ConfArc
+    , tickFront : Maybe ConfTick
+    , tickFront5 : Maybe ConfTick
+    , tickBack : Maybe ConfTick
+    , tickBack5 : Maybe ConfTick
+    , deviated : Maybe ConfDeviation
     }
