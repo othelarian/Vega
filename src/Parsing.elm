@@ -4,8 +4,6 @@ import Config as Cfg
 
 import Url
 
---import Debug
-
 parseUrl : Url.Url -> Cfg.Conf
 parseUrl url =
     let
@@ -27,7 +25,7 @@ parseUrl url =
                                     , "#"++ String.dropLeft 1 frst
                                     )
                             else (base.screen, base.bgCol)
-                        -- VARIATIONS ===============================
+                        -- SECONDS ==================================
                         --
                         --
                         --
@@ -38,27 +36,35 @@ parseUrl url =
                     Cfg.Conf
                         defscreen
                         bgcol
-                        (Cfg.ConfSecond
-                            (Cfg.ConfShow True True True)
-                            --
-                            Cfg.StyleBoth -- needleStyle
-                            "#00ff00ff" -- needleCol
-                            --
-                            (Cfg.ConfArc 55 "#ffaaffff" 3 6)
-                            --
-                            --
+                        (Cfg.ConfPart -- seconds
+                            Nothing -- needle (TO CHANGE)
+                            base.seconds.arcFront -- arcFront
+                            Nothing -- arcBack (TO CHANGE)
+                            Nothing -- tickFront (TO CHANGE)
+                            Nothing -- tickFront5 (TO CHANGE)
+                            Nothing -- tickBack (TO CHANGE)
+                            Nothing -- tickBack5 (TO CHANGE)
+                            Nothing -- deviated
                         )
-                        (Cfg.ConfMinute
-                            (Cfg.ConfShow True True True)
-                            --
-                            (Cfg.ConfArc 60 "#ffcc88ff" 3 6)
-                            --
+                        (Cfg.ConfPart -- minutes
+                            Nothing -- needle (TO CHANGE)
+                            base.minutes.arcFront -- arcFront
+                            Nothing -- arcBack (TO CHANGE)
+                            Nothing -- tickFront (TO CHANGE)
+                            Nothing -- tickFront5 (TO CHANGE)
+                            Nothing -- tickBack (TO CHANGE)
+                            Nothing -- tickBack5 (TO CHANGE)
+                            Nothing -- deviated
                         )
-                        (Cfg.ConfHour
-                            (Cfg.ConfShow True True True)
-                            --
-                            (Cfg.ConfArc 65 "#ff0000ff" 3 30)
-                            --
+                        (Cfg.ConfPart -- hours
+                            Nothing -- needle (TO CHANGE)
+                            base.hours.arcFront -- arcFront
+                            Nothing -- arcBack (TO CHANGE)
+                            Nothing -- tickFront (TO CHANGE)
+                            Nothing -- tickFront5 (TO CHANGE)
+                            Nothing -- tickBack (TO CHANGE)
+                            Nothing -- tickBack5 (TO CHANGE)
+                            Nothing -- deviated
                         )
                 _ -> base
         fconf =

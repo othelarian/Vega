@@ -2,9 +2,8 @@
 
 TODO:
 
-* adapt the clock to the new config system
+* enable moving forward and backward for time values
 * change second color
-* make custom date second enable
 
 DONE:
 
@@ -15,3 +14,11 @@ DONE:
 * really build infos from configuration for the viewer link
 * adding a link from the viwer to the customizer
 * rework the config system
+* adapt the clock to the new config system
+* custom link from viewer to customizer
+* rework customizer design when 16:10
+* initialize customizer with current timestamp
+* connect second to datetime selector
+* make seconds selectable
+* reintroduce minute arc
+* make minutes and hours selectable

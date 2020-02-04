@@ -67,7 +67,7 @@ type Msg
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
     case msg of
-        SetZone nzone -> ({model | zone = nzone}, Cmd.none)
+        SetZone nzone -> ({model | zone = nzone}, Task.perform Tick Time.now)
         Tick ntime -> ({model | time = ntime}, Cmd.none)
         LinkClicked _ -> (model, Cmd.none)
         UrlChanged url -> ({model | url = url, conf = parseUrl url}, Cmd.none)
@@ -107,7 +107,25 @@ viewVeil open conf url =
         veilCtnt = [HS.a
             [ HA.href linkCustomizer
             , HA.target "blank"
-            , HA.css [C.fontSize (C.em 3), C.color (C.hex "#fff")]
+            , HA.css
+                [ C.fontSize (C.em 2)
+                , C.color (C.hex "#000")
+                , C.backgroundColor (C.hex "#fff")
+                , C.textDecoration C.none
+                , C.display C.inlineBlock
+                , C.border3 (C.px 1) C.solid (C.hex "#000")
+                , C.borderRadius (C.px 85)
+                , C.height (C.px 90)
+                , C.width (C.px 165)
+                , C.textAlign C.center
+                , C.padding2 (C.px 35) (C.px 0)
+                , C.marginTop (C.pct 20)
+                , C.hover
+                    [ C.backgroundColor (C.hex "#000")
+                    , C.border3 (C.px 1) C.solid (C.hex "#fff")
+                    , C.color (C.hex "#fff")
+                    ]
+                ]
             ]
             [HS.text "Go to CustomizR!"]]
         (veilcol, react, veilcontent) =

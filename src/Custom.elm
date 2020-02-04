@@ -42,10 +42,15 @@ type alias Color =
     }
 
 type alias SettingsColor =
-    { c1: Color
-    , c2: Color
-    , open: Bool
+    { c1 : Color
+    , c2 : Color
+    , open : Bool
     }
+
+initSettingsColor : String -> SettingsColor
+initSettingsColor color =
+    let hexcol = fromHex2Color color in
+    SettingsColor hexcol hexcol False
 
 type alias Settings =
     { bgCol : SettingsColor
@@ -54,7 +59,7 @@ type alias Settings =
 initSettings : Cfg.Conf -> Settings
 initSettings conf =
     Settings
-        (SettingsColor (fromHex2Color conf.bgCol) (fromHex2Color conf.bgCol) False) -- bgCol
+        (initSettingsColor conf.bgCol) -- bgCol
 
 type alias Model =
     { key : BN.Key
@@ -82,21 +87,15 @@ init _ url key = (initModel key url, Task.perform SetZone Time.here)
 -- UPDATE
 
 type Msg
-    = SetZone Time.Zone
-    | LinkClicked Browser.UrlRequest
+    = LinkClicked Browser.UrlRequest
     | UrlChanged Url.Url
     -- time messages
-    --
+    | SetZone Time.Zone
+    | SetCurrentTime Time.Posix
+    | SelectTime String String
+    | MoveTime Bool String
     -- screen messages
     | SetOrientation String
-    --
-    --
-    -- variations messages
-    --
-    --
-    -- settings messages
-    --
-    --
     -- color messages
     | ToggleColorSliders String
     | MoveColorSlider String String
@@ -105,13 +104,11 @@ type Msg
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
     case msg of
-        SetZone nzone -> ({model | zone = nzone}, Cmd.none)
         LinkClicked _ -> (model, Cmd.none)
         UrlChanged url -> ({model | url = url, conf = parseUrl url}, Cmd.none)
         -- time update
-        --
-        -- IDEA : date conf
-        --
+        SetZone nzone -> ({model | zone = nzone}, Task.perform SetCurrentTime Time.now)
+        SetCurrentTime ntime -> ({model | time = ntime}, Cmd.none)
         -- screen update
         SetOrientation nscreen ->
             let
@@ -123,14 +120,35 @@ update msg model =
                 url = buildUrl model.url {oconf | screen = ascreen}
             in
             (model, BN.pushUrl model.key (Url.toString url))
-        --
-        --
-        -- variations update
-        --
-        --
-        -- settings update
-        --
-        --
+        SelectTime ref value ->
+            let
+                v = String.toInt value |> Maybe.withDefault 0
+                rng r c = case compare v r of
+                    LT -> (r - v) * -1 * c
+                    GT -> (v - r) * c
+                    EQ -> 0
+                otime = model.time
+                trans (r, c) = Time.posixToMillis otime
+                    |> (+) (rng r c)
+                    |> Time.millisToPosix
+                ntime = trans <| case ref of
+                    "second" -> (Time.toSecond model.zone otime, 1000)
+                    "minute" -> (Time.toMinute model.zone otime, 60000)
+                    "hour" -> (Time.toHour model.zone otime, 3600000)
+                    _ -> (0, 0)
+            in
+            ({model | time = ntime}, Cmd.none)
+        MoveTime way ref ->
+            let
+                --
+                --
+                otime = model.time
+                --
+                --
+                ntime = otime
+                --
+            in
+            ({model | time = ntime}, Cmd.none)
         -- Color update
         ToggleColorSliders ref ->
             let
@@ -178,6 +196,10 @@ update msg model =
                 url = buildUrl model.url nconf
             in
             ({model | settings = nsettings}, BN.pushUrl model.key (Url.toString url))
+        --
+        --
+        --
+        --
 
 -- SUBS
 
@@ -236,8 +258,11 @@ view model =
                 [ HS.h2 [HA.css [C.textAlign C.center]] [HS.text "VEGA - Customizer"]
                 , viewDateSelector model.time model.zone
                 , viewLink model.url model.conf
-                , viewClockCustom model.conf model.time model.zone
-                , viewClockSettings model.conf model.settings
+                , HS.div
+                    [HA.css [C.maxWidth (C.px 1400), C.margin C.auto]]
+                    [ viewClockCustom model.conf model.time model.zone
+                    , viewClockSettings model.conf model.settings
+                    ]
                 , HS.div [HA.css [C.property "clear" "both"]] [HS.text ""]
                 ]
             )
@@ -245,36 +270,42 @@ view model =
     }
 
 viewDateSelector : Time.Posix -> Time.Zone -> HS.Html Msg
-viewDateSelector _ _ =
+viewDateSelector time zone =
     let
+        btnCss =
+            [ C.border3 (C.px 1) C.solid (C.hex "#fff")
+            , C.backgroundColor (C.hex "#fff")
+            , C.padding2 (C.px 3) (C.px 2)
+            ]
+        option a s = HS.option
+            [HA.value (String.fromInt a), HA.selected s]
+            [HS.text ((if a < 10 then "0" else "")++String.fromInt a)]
+        sel max v m = HS.select
+            [HA.css btnCss, HE.onInput m]
+            (List.map (\a -> option a (a == v)) (List.range 0 max))
         --
         --
-        _ = ""
+        timeBlock v r max =
+            [ HS.button [HA.css btnCss] [HS.text "◀"]
+            , sel max v (SelectTime r)
+            , HS.button [HA.css btnCss] [HS.text "▶"]
+            ]
         --
     in
     HS.div
         [ HA.css
-            [ C.margin (C.px 10)
+            [ C.margin2 (C.px 10) C.auto
             , C.border3 (C.px 2) C.solid (C.hex "#000")
             , C.padding (C.px 10)
             , C.textAlign C.center
+            , C.maxWidth (C.px 500)
             ]
         ]
         [ HS.p [] [] -- IDEA : YYYY/MM/DD
         , HS.p []
-        --
-        -- IDEA : HH:MM:SS
-        --
-            [ HS.label [] [HS.text ":"]
-            , HS.input [] []
-            , HS.label [] [HS.text ":"]
-            --
-            , HS.input
-                []
-                []
-            --
-            --
-            ]
+            (timeBlock (Time.toHour zone time) "hour" 23
+            ++(HS.label [] [HS.text ":"]::timeBlock (Time.toMinute zone time) "minute" 59)
+            ++(HS.label [] [HS.text ":"]::timeBlock (Time.toSecond zone time) "second" 59))
         , HS.p [] [] -- IDEA : | <- | select | -> |
         ]
 
@@ -365,6 +396,7 @@ viewClockSettings conf settings =
             , C.width (C.calc (C.pct 100) C.minus (C.px 720))
             , C.border3 (C.px 2) C.solid (C.hex "#000")
             , C.boxSizing C.borderBox
+            , C.maxWidth (C.px 650)
             , CM.withMedia
                 [CM.all [CM.maxWidth (C.px 700)]]
                 [C.property "float" "none", C.width C.auto]
@@ -406,7 +438,9 @@ viewOptionSelector title msg options =
     in
     viewSettingsBlock title
         [ HS.select
-            [HE.onInput msg]
+            [ HA.css [C.backgroundColor (C.hex "#fff"), C.border3 (C.px 1) C.solid (C.hex "#fff")]
+            , HE.onInput msg
+            ]
             (List.map (\o -> option o.name o.value o.sel) options)
         ]
 
@@ -434,15 +468,17 @@ viewColorSelector title ref hex settcol =
             , HA.value (String.fromInt val)
             , HE.onInput (MoveColorSlider (sref++"-"++usref))
             ] []
+        btnCss col =
+            [ C.width (C.px btn_width)
+            , C.backgroundColor (C.hex (btn_col col))
+            , C.color (C.hex (btn_col col))
+            , C.marginLeft (C.px 15)
+            , C.border3 (C.px 2) C.solid (C.hex "#fff")
+            ]
         sliders =
             if settcol.open then
                 [ HS.button
-                    [ HA.css
-                        [ C.width (C.px btn_width)
-                        , C.backgroundColor (C.hex (btn_col settcol.c2))
-                        , C.color (C.hex (btn_col settcol.c2))
-                        , C.marginLeft (C.px 15)
-                        ]
+                    [ HA.css (btnCss settcol.c2)
                         , HE.onClick (SelectColorSlider ref)
                     ]
                     [HS.text "color"]
@@ -455,12 +491,7 @@ viewColorSelector title ref hex settcol =
     in
     viewSettingsBlock title
         ( HS.button
-            [ HA.css
-                [ C.width (C.px btn_width)
-                , C.backgroundColor (C.hex (btn_col settcol.c1))
-                , C.color (C.hex (btn_col settcol.c1))
-                , C.marginLeft (C.px 15)
-                ]
+            [ HA.css (btnCss settcol.c1)
             , HE.onClick (ToggleColorSliders ref)
             ]
             [HS.text "color"]

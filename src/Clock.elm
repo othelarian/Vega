@@ -6,9 +6,6 @@ import Svg.Styled as S
 import Svg.Styled.Attributes as SA
 import Time
 
---import Debug
-
-
 getClock : Cfg.Conf -> Time.Posix -> Time.Zone -> List (S.Svg msg)
 getClock conf time zone =
     let
@@ -29,9 +26,9 @@ getClock conf time zone =
         [ [testScreen]
         --
         --
-        --, componentHours center conf.hours hrs (hrs//12 == 0)
-        --, componentMinutes center conf.minutes mins (modBy 2 hrs == 0)
-        , component center conf.seconds secs (modBy 2 mins == 0)
+        , component center conf.hours (remainderBy 12 hrs) (hrs//12 == 0) 12
+        , component center conf.minutes mins (modBy 2 hrs == 0) 60
+        , component center conf.seconds secs (modBy 2 mins == 0) 60
         ]
     --
 
@@ -48,25 +45,35 @@ getCenterTransform (centerX, centerY) =
 
 -- COMPONENTS
 
-component : (Int, Int) -> Cfg.ConfPart -> Int -> Bool -> List (S.Svg msg)
-component center config value valMod =
+component : (Int, Int) -> Cfg.ConfPart -> Int -> Bool -> Int -> List (S.Svg msg)
+component center config value valMod limit =
     let
         --
         --
-        circ = buildArc value 60 config.confCirc valMod
+        needle = case config.needle of
+            Just _ -> [buildNeedle]
+            Nothing -> []
+        --
+        circFront = case config.arcFront of
+            Just conf -> [buildArc value limit conf valMod]
+            Nothing -> []
         --
         --
     in
     [ S.g
         [getCenterTransform center]
-        [
-        --
-        --
-            circ
-        --
-        --
-        , S.g [SA.transform "rotate(0)"] [S.path [SA.d ""] []]
-        ]
+        (List.concat
+            [ circFront
+            , [
+            --
+            --
+            --
+            --
+            S.g [SA.transform "rotate(0)"]
+                [S.path [SA.d ""] []]
+            ]
+            , needle
+            ])
     ]
 
 -- BUILDERS
@@ -84,7 +91,7 @@ buildArc val limit confArc par =
         radS = itos confArc.radius
         pathBase = [ "m", "0,-"++radS, "A", radS, radS, "0"]
         arcStyle =
-            [ SA.stroke confArc.col
+            [ SA.stroke confArc.color
             , SA.strokeWidth (itos confArc.thickness)
             , SA.fill "none"
             ]
